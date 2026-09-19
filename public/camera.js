@@ -1,105 +1,38 @@
-const video = document.getElementById('localVideo');
-const statusText = document.getElementById('status');
-const startButton = document.getElementById('startCamera');
+const express = require('express');
+const http = require('http');
+const WebSocket = require('ws');
+const path = require('path');
 
-let socket;
-let peerConnection;
-let localStream;
+const app = express();
+const server = http.createServer(app);
+const wss = new WebSocket.Server({ server });
 
-const iceServers = {
-  iceServers: [
-    {
-      urls: 'stun:stun.l.google.com:19302',
-    },
-  ],
-};
+// static ফাইল (html, js, css) লোড করার জন্য
+app.use(express.static(__dirname));
 
-function connectSocket() {
-  const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+// index (viewer) পেজের জন্য রুট
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
+});
 
-  socket = new WebSocket(`${protocol}//${location.host}`);
+// camera পেজের জন্য রুট
+app.get('/camera.html', (req, res) => {
+  res.sendFile(path.join(__dirname, 'camera.html'));
+});
 
-  socket.onopen = () => {
-    statusText.textContent = 'Connected. Ready to start camera.';
-  };
-
-  socket.onclose = () => {
-    statusText.textContent = 'Connection closed.';
-  };
-
-  socket.onmessage = async event => {
-    const message = JSON.parse(event.data);
-
-    if (message.type === 'answer') {
-      await peerConnection.setRemoteDescription(
-        new RTCSessionDescription(message.answer),
-      );
-
-      statusText.textContent = 'Camera is streaming.';
-    }
-
-    if (message.type === 'candidate') {
-      if (peerConnection) {
-        try {
-          await peerConnection.addIceCandidate(message.candidate);
-        } catch (error) {
-          console.error(error);
-        }
+// WebSocket Signaling Server Logic
+wss.on('connection', ws => {
+  ws.on('message', message => {
+    // মেসেজ পাওয়ার পর অন্য সব কানেক্টেড ক্লায়েন্টকে পাঠিয়ে দেওয়া
+    wss.clients.forEach(client => {
+      if (client !== ws && client.readyState === WebSocket.OPEN) {
+        client.send(message.toString());
       }
-    }
-  };
-}
-
-async function startCamera() {
-  try {
-    statusText.textContent = 'Requesting camera permission...';
-
-    localStream = await navigator.mediaDevices.getUserMedia({
-      video: {
-        facingMode: 'environment',
-      },
-      audio: false,
     });
+  });
+});
 
-    video.srcObject = localStream;
-
-    peerConnection = new RTCPeerConnection(iceServers);
-
-    localStream.getTracks().forEach(track => {
-      peerConnection.addTrack(track, localStream);
-    });
-
-    peerConnection.onicecandidate = event => {
-      if (event.candidate) {
-        socket.send(
-          JSON.stringify({
-            type: 'candidate',
-            candidate: event.candidate,
-          }),
-        );
-      }
-    };
-
-    const offer = await peerConnection.createOffer();
-
-    await peerConnection.setLocalDescription(offer);
-
-    socket.send(
-      JSON.stringify({
-        type: 'offer',
-        offer,
-      }),
-    );
-
-    statusText.textContent = 'Waiting for PC viewer...';
-  } catch (error) {
-    console.error(error);
-
-    statusText.textContent =
-      'Camera permission was denied or camera is unavailable.';
-  }
-}
-
-startButton.addEventListener('click', startCamera);
-
-connectSocket();
+const PORT = process.env.PORT || 10000;
+server.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
