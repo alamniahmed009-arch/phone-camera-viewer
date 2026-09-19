@@ -4,28 +4,45 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>My Phone Camera</title>
-  <link rel="stylesheet" href="style.css">
+  <title>Phone Camera Stream</title>
+  <style>
+    body {
+      text-align: center;
+      background-color: #121212;
+      color: white;
+      font-family: Arial, sans-serif;
+    }
+
+    video {
+      width: 90%;
+      max-width: 500px;
+      border-radius: 8px;
+      margin-top: 15px;
+      background: #000;
+    }
+
+    button {
+      padding: 12px 24px;
+      font-size: 16px;
+      margin-top: 15px;
+      cursor: pointer;
+      border-radius: 5px;
+      border: none;
+      background: #007bff;
+      color: white;
+    }
+  </style>
 </head>
 
 <body>
+  <h2>Phone Camera Sender</h2>
+  <p id="status">Connecting to server...</p>
+  <video id="localVideo" autoplay playsinline muted></video>
+  <br>
+  <button id="startCamera">Start Camera</button>
 
-  <main class="container">
-
-    <h1>My Phone Camera</h1>
-
-    <p id="status">Camera is off</p>
-
-    <video id="localVideo" autoplay muted playsinline></video>
-
-    <button id="startCamera">
-      Start Camera
-    </button>
-
-  </main>
-
+  <!-- camera.js ফাইলটি লোড করার সঠিক উপায় -->
   <script src="camera.js"></script>
-
 </body>
 
 </html>
